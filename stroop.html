@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stroop Conflict Test</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121212;
+            color: #E0E0E0;
+            touch-action: none;
+        }
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        h1 { font-size: 1.1rem; font-weight: 600; color: #888; }
+        .btn {
+            background-color: #222;
+            color: #FFF;
+            border: 1px solid #444;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+        }
+        .btn:active { background-color: #333; }
+        .btn-accent { background-color: #1A5276; border-color: #2980B9; }
+        #stroop-screen, #results-screen {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+        .hidden { display: none !important; }
+        #stroop-stimulus {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+            height: 5rem;
+            display: flex;
+            align-items: center;
+        }
+        .stroop-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            width: 100%;
+            max-width: 340px;
+        }
+        .stroop-btn {
+            height: 65px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 12px;
+            border: none;
+            color: #FFF;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+        }
+        .results-panel {
+            text-align: center;
+            background: #1A1A1A;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            max-width: 340px;
+            width: 85%;
+        }
+        .results-panel h2 { margin-bottom: 12px; font-size: 1.3rem; color: #2ECC71; }
+        .results-panel p { font-size: 1rem; margin: 8px 0; color: #BBB; }
+        .sync-status { font-size: 0.85rem; margin-top: 12px; font-weight: bold; color: #F1C40F; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <header>
+        <h1>Stroop Modality</h1>
+        <a href="index.html" class="btn">⬅ Back</a>
+    </header>
+
+    <div id="stroop-screen">
+        <div id="stroop-counter" style="color:#666;">Trial 1/15</div>
+        <div id="stroop-stimulus">WORD</div>
+        <div class="stroop-grid">
+            <button class="stroop-btn" style="background-color: #E74C3C;" onclick="handleStroopInput('#E74C3C')">RED</button>
+            <button class="stroop-btn" style="background-color: #3498DB;" onclick="handleStroopInput('#3498DB')">BLUE</button>
+            <button class="stroop-btn" style="background-color: #2ECC71;" onclick="handleStroopInput('#2ECC71')">GREEN</button>
+            <button class="stroop-btn" style="background-color: #F1C40F;" onclick="handleStroopInput('#F1C40F')">YELLOW</button>
+        </div>
+    </div>
+
+    <div id="results-screen" class="hidden">
+        <div class="results-panel">
+            <h2>Stroop Complete</h2>
+            <p id="res-metric-1">Time: --</p>
+            <p id="res-metric-2">Errors: --</p>
+            <div id="res-sync" class="sync-status">Awaiting Sync...</div>
+            <a class="btn btn-accent" style="margin-top:20px; display:block;" href="index.html">Done</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    const COLOR_MAP = { '#E74C3C': 'RED', '#3498DB': 'BLUE', '#2ECC71': 'GREEN', '#F1C40F': 'YELLOW' };
+    const COLORS = Object.keys(COLOR_MAP);
+    const WORDS = Object.values(COLOR_MAP);
+
+    let startTime = 0;
+    let stroopTrialIndex = 0;
+    let stroopErrors = 0;
+    let targetStroopHex = '';
+
+    function initStroop() {
+        stroopTrialIndex = 0;
+        stroopErrors = 0;
+        startTime = performance.now();
+        nextStroopTrial();
+    }
+
+    function nextStroopTrial() {
+        stroopTrialIndex++;
+        if (stroopTrialIndex > 15) {
+            const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+            showResults(duration, stroopErrors);
+            return;
+        }
+        document.getElementById('stroop-counter').innerText = `Trial ${stroopTrialIndex}/15`;
+        
+        let randomWordIdx = Math.floor(Math.random() * WORDS.length);
+        let randomColorIdx = Math.floor(Math.random() * COLORS.length);
+        while (randomWordIdx === randomColorIdx) {
+            randomColorIdx = Math.floor(Math.random() * COLORS.length);
+        }
+
+        const el = document.getElementById('stroop-stimulus');
+        el.innerText = WORDS[randomWordIdx];
+        targetStroopHex = COLORS[randomColorIdx];
+        el.style.color = targetStroopHex;
+    }
+
+    function handleStroopInput(selectedHex) {
+        if (selectedHex !== targetStroopHex) {
+            stroopErrors++;
+        }
+        nextStroopTrial();
+    }
+
+    function showResults(timeSec, errors) {
+        document.getElementById('stroop-screen').classList.add('hidden');
+        document.getElementById('results-screen').classList.remove('hidden');
+        document.getElementById('res-metric-1').innerText = `Duration: ${timeSec} seconds`;
+        document.getElementById('res-metric-2').innerText = `Incorrect Taps: ${errors}`;
+        
+        pushToGitHub(timeSec, errors);
+    }
+
+    async function pushToGitHub(timeSec, errors) {
+        const syncEl = document.getElementById('res-sync');
+        const token = localStorage.getItem('gh_ef_token');
+        const repo = localStorage.getItem('gh_ef_repo');
+        const path = localStorage.getItem('gh_ef_path') || 'energy_log.csv';
+
+        if (!token || !repo) {
+            syncEl.innerText = "⚠️ Skipped Sync: No config found inside index page.";
+            syncEl.style.color = "#E67E22";
+            return;
+        }
+
+        syncEl.innerText = "Syncing metrics to GitHub...";
+        const timestamp = new Date().toISOString();
+        const csvLine = `"${timestamp}","Stroop",${timeSec},${errors}\n`;
+        const url = `https://github.com{repo}/contents/${path}`;
+
+        try {
+            let sha = null;
+            let currentContent = "";
+
+            const getRes = await fetch(url, {
+                method: "GET",
+                headers: { "Authorization": `token ${token}` }
+            });
+
+            if (getRes.status === 200) {
+                const data = await getRes.json();
+                sha = data.sha;
+                currentContent = atob(data.content); 
+            } else if (getRes.status === 404) {
+                currentContent = "timestamp,test_type,duration_seconds,error_count\n";
+            } else {
+                throw new Error(`Response status code ${getRes.status}`);
+            }
+
+            const updatedContent = currentContent + csvLine;
+            const encodedContent = btoa(unescape(encodeURIComponent(updatedContent)));
+
+            const putBody = { message: 'Log executive metrics: Stroop', content: encodedContent };
+            if (sha) putBody.sha = sha;
+
+            const putRes = await fetch(url, {
+                method: "PUT",
+                headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+                body: JSON.stringify(putBody)
+            });
+
+            if (putRes.status === 200 || putRes.status === 201) {
+                syncEl.innerText = "✓ Written to CSV on GitHub";
+                syncEl.style.color = "#2ECC71";
+            } else {
+                throw new Error(`Write failed code ${putRes.status}`);
+            }
+        } catch (err) {
+            syncEl.innerText = `⚠️ Cloud Sync Error: ${err.message}`;
+            syncEl.style.color = "#E74C3C";
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', initStroop);
+</script>
+</body>
+</html>
