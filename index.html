@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Executive Energy Tracker</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121212;
+            color: #E0E0E0;
+            touch-action: none;
+        }
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        h1 { font-size: 1.1rem; font-weight: 600; color: #888; }
+        .btn {
+            background-color: #222;
+            color: #FFF;
+            border: 1px solid #444;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+        }
+        .btn:active { background-color: #333; }
+        .btn-accent { background-color: #1A5276; border-color: #2980B9; }
+        .btn-accent:active { background-color: #2980B9; }
+        #main-menu, #config-screen {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+        .hidden { display: none !important; }
+        #config-screen input {
+            background: #222;
+            border: 1px solid #444;
+            color: #FFF;
+            padding: 10px;
+            border-radius: 6px;
+            width: 85%;
+            max-width: 320px;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        #config-status { font-size: 0.8rem; height: 1.2rem; color: #E74C3C; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <header>
+        <h1>Capacity Biopsy</h1>
+        <button class="btn" id="nav-config-btn" onclick="showConfig()">⚙️ GitHub Config</button>
+    </header>
+
+    <!-- Main Menu -->
+    <div id="main-menu">
+        <a href="stroop.html" class="btn btn-accent" style="width: 220px; padding: 15px;">Start Stroop Test</a>
+        <a href="schulte.html" class="btn btn-accent" style="width: 220px; padding: 15px;">Start Schulte Grid</a>
+    </div>
+
+    <!-- Configuration Screen -->
+    <div id="config-screen" class="hidden">
+        <h3 style="margin-bottom:10px;">GitHub Storage Settings</h3>
+        <input type="text" id="cfg-token" placeholder="GitHub PAT (fine-grained/classic)" autocomplete="off">
+        <input type="text" id="cfg-repo" placeholder="username/repository-name" autocomplete="off">
+        <input type="text" id="cfg-path" placeholder="energy_log.csv" value="energy_log.csv" autocomplete="off">
+        <div id="config-status"></div>
+        <div style="display:flex; gap:10px; width:85%; max-width:320px;">
+            <button class="btn" style="flex:1;" onclick="hideConfig()">Cancel</button>
+            <button class="btn btn-accent" style="flex:1;" onclick="saveConfig()">Save Settings</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    function getGHConfig() {
+        return {
+            token: localStorage.getItem('gh_ef_token') || '',
+            repo: localStorage.getItem('gh_ef_repo') || '',
+            path: localStorage.getItem('gh_ef_path') || 'energy_log.csv'
+        };
+    }
+
+    function showConfig() {
+        const config = getGHConfig();
+        document.getElementById('cfg-token').value = config.token;
+        document.getElementById('cfg-repo').value = config.repo;
+        document.getElementById('cfg-path').value = config.path;
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('config-screen').classList.remove('hidden');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const config = getGHConfig();
+        if(!config.token || !config.repo) {
+            document.getElementById('config-status').innerText = 'Please configure your token settings first.';
+            document.getElementById('config-status').style.color = '#F1C40F';
+            showConfig();
+        }
+    });
+
+    function hideConfig() {
+        document.getElementById('config-screen').classList.add('hidden');
+        document.getElementById('main-menu').classList.remove('hidden');
+    }
+
+    function saveConfig() {
+        const token = document.getElementById('cfg-token').value.trim();
+        const repo = document.getElementById('cfg-repo').value.trim();
+        const path = document.getElementById('cfg-path').value.trim();
+
+        if(!token || !repo || !path) {
+            document.getElementById('config-status').innerText = 'All configurations required.';
+            document.getElementById('config-status').style.color = '#E74C3C';
+            return;
+        }
+        localStorage.setItem('gh_ef_token', token);
+        localStorage.setItem('gh_ef_repo', repo);
+        localStorage.setItem('gh_ef_path', path);
+        document.getElementById('config-status').innerText = '';
+        hideConfig();
+    }
+</script>
+</body>
+</html>
